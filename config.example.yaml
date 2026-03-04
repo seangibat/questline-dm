@@ -18,7 +18,7 @@ allowed_groups:
 # LLM provider: "anthropic" or "gemini"
 # API key from .env file (ANTHROPIC_API_KEY or GEMINI_API_KEY)
 provider: "anthropic"
-model: "claude-sonnet-4-6"           # or "gemini-2.5-flash"
+model: "gemini-3-flash-preview"           # or "gemini-2.5-flash"
 max_tokens: 1024
 max_narrative_in_prompt: 15
 
@@ -28,4 +28,4 @@ compaction_threshold: 60000
 
 # Haiku triage — skip main model for banter/non-game messages
 triage_enabled: true
-triage_model: "claude-haiku-4-5-20251001"  # or "gemini-2.5-flash"
+triage_model: "gemini-3.1-flash-lite-preview"  # or "gemini-2.5-flash"
