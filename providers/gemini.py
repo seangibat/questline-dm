@@ -81,6 +81,31 @@ class GeminiProvider(LLMProvider):
         return "\n\n".join(parts)
 
     @staticmethod
+    def _fix_schema_types(schema: dict) -> dict:
+        """Recursively fix JSON Schema nullable types for Gemini.
+
+        Gemini expects a single type string (e.g. "STRING"), not
+        JSON Schema nullable arrays like ["string", "null"].
+        """
+        result = {}
+        for k, v in schema.items():
+            if k == "type" and isinstance(v, list):
+                # ["string", "null"] → "string" (drop null)
+                non_null = [t for t in v if t != "null"]
+                result[k] = non_null[0] if non_null else "string"
+            elif k == "properties" and isinstance(v, dict):
+                result[k] = {
+                    pk: GeminiProvider._fix_schema_types(pv)
+                    if isinstance(pv, dict) else pv
+                    for pk, pv in v.items()
+                }
+            elif isinstance(v, dict):
+                result[k] = GeminiProvider._fix_schema_types(v)
+            else:
+                result[k] = v
+        return result
+
+    @staticmethod
     def _translate_tools(tool_defs: list[dict]) -> types.Tool:
         """Convert Anthropic tool definitions to a Gemini Tool object."""
         declarations = []
@@ -91,11 +116,11 @@ class GeminiProvider(LLMProvider):
             }
             schema = tool.get("input_schema")
             if schema:
-                # Strip cache_control and other Anthropic-specific keys
-                decl["parameters"] = {
+                cleaned = {
                     k: v for k, v in schema.items()
                     if k not in ("cache_control",)
                 }
+                decl["parameters"] = GeminiProvider._fix_schema_types(cleaned)
             declarations.append(decl)
         return types.Tool(function_declarations=declarations)
 
@@ -137,30 +162,54 @@ class GeminiProvider(LLMProvider):
                     tid = block.get("id", "")
                     name = block.get("name", "")
                     tool_id_to_name[tid] = name
-                    parts.append(types.Part(
-                        function_call=types.FunctionCall(
-                            name=name,
-                            args=block.get("input") or {},
-                        )
-                    ))
+                    ts = block.get("thought_signature")
+                    if ts:
+                        # Has thought_signature — safe to send as function_call.
+                        # Decode from base64 string back to bytes.
+                        import base64
+                        ts_bytes = base64.b64decode(ts) if isinstance(ts, str) else ts
+                        parts.append(types.Part(
+                            function_call=types.FunctionCall(
+                                name=name,
+                                args=block.get("input") or {},
+                            ),
+                            thought_signature=ts_bytes,
+                        ))
+                    else:
+                        # Old history (e.g. from Anthropic) — no thought_signature.
+                        # Convert to text to avoid Gemini 3 rejection.
+                        args_str = json.dumps(block.get("input") or {})
+                        parts.append(types.Part(
+                            text=f"[Called {name}({args_str})]"
+                        ))
+                        # Mark this tool_use_id as "textified" so matching
+                        # tool_result also becomes text.
+                        tool_id_to_name[tid] = f"__text__{name}"
 
                 elif btype == "tool_result":
                     tid = block.get("tool_use_id", "")
                     name = tool_id_to_name.get(tid, "unknown")
                     raw_content = block.get("content", "")
-                    if isinstance(raw_content, str):
-                        try:
-                            response_data = json.loads(raw_content)
-                        except (json.JSONDecodeError, TypeError):
-                            response_data = {"result": raw_content}
-                    elif isinstance(raw_content, dict):
-                        response_data = raw_content
-                    else:
-                        response_data = {"result": str(raw_content)}
 
-                    parts.append(types.Part.from_function_response(
-                        name=name, response=response_data,
-                    ))
+                    if name.startswith("__text__"):
+                        # Matching tool_use was textified — do the same
+                        parts.append(types.Part(
+                            text=f"[Result: {raw_content[:500]}]"
+                        ))
+                    else:
+                        if isinstance(raw_content, str):
+                            try:
+                                response_data = json.loads(raw_content)
+                            except (json.JSONDecodeError, TypeError):
+                                response_data = {"result": raw_content}
+                        elif isinstance(raw_content, dict):
+                            response_data = raw_content
+                        else:
+                            response_data = {"result": str(raw_content)}
+
+                        parts.append(types.Part.from_function_response(
+                            name=name, response=response_data,
+                        ))
 
                 elif btype == "compaction":
                     # From a prior Anthropic session — pass through as text
@@ -222,11 +271,21 @@ class GeminiProvider(LLMProvider):
                     has_tool_use = True
                     fc = part.function_call
                     counter = next(self._tool_use_counter)
+                    # Preserve thought_signature — Gemini 3 requires it
+                    # to be echoed back on function_call parts in history.
+                    # Store as base64 string for JSON serialization.
+                    ts_raw = getattr(part, "thought_signature", None)
+                    if isinstance(ts_raw, bytes):
+                        import base64
+                        ts = base64.b64encode(ts_raw).decode("ascii")
+                    else:
+                        ts = ts_raw
                     blocks.append(ContentBlock(
                         type="tool_use",
                         id=f"gemini_{fc.name}_{counter}",
                         name=fc.name,
                         input=dict(fc.args) if fc.args else {},
+                        thought_signature=ts,
                     ))
 
         # Map finish_reason → normalized stop_reason

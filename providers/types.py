@@ -20,6 +20,8 @@ class ContentBlock:
     id: str | None = None
     name: str | None = None
     input: dict[str, Any] | None = None
+    # Gemini thought_signature — must be echoed back on function_call parts
+    thought_signature: str | None = None
 
 
 @dataclass
