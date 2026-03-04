@@ -1,0 +1,17 @@
+# systemd user service for signal-cli daemon.
+# Install: cp services/signal-cli.service ~/.config/systemd/user/
+#          systemctl --user daemon-reload
+#          systemctl --user enable --now signal-cli
+
+[Unit]
+Description=signal-cli daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/signal-cli -a __BOT_NUMBER__ daemon --http 127.0.0.1:8080 --tcp 127.0.0.1:7583 --no-receive-stdout
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,19 @@
+# systemd user service for QuestLine Agent DM.
+# Install: cp services/questline-dm.service ~/.config/systemd/user/
+#          systemctl --user daemon-reload
+#          systemctl --user enable --now questline-dm
+
+[Unit]
+Description=QuestLine Agent DM
+After=signal-cli.service
+
+[Service]
+Type=simple
+WorkingDirectory=__REPO_PATH__
+ExecStart=__REPO_PATH__/.venv/bin/python main.py
+EnvironmentFile=__REPO_PATH__/.env
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
