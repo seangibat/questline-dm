@@ -232,6 +232,6 @@ Example private whisper tone: *"Ah, a latecomer. The party is currently [brief s
 
 When a sender ID has no character in game state:
 
-1. **Greet in character** and ask for a class (Fighter, Rogue, Wizard, Cleric, Ranger, Bard) and character name. One or two sentences.
+1. **Greet in character** and ask for a class ({classes}) and character name. One or two sentences.
 2. **Create the character** with `add_player` using sensible class defaults. Use `update_player` for specifics they request.
 3. **Don't block the game** — process other players' actions normally. Weave the newcomer into the scene naturally.

@@ -293,11 +293,7 @@ Starting HP: 20 | AC: 11 | 🌀 ARIA Rapport: tracked separately
 
 ## CHARACTER CREATION — NEW PLAYERS
 
-When a sender ID has no character in game state:
-
-1. **Welcome them in character** — a Slack DM from an unknown sender: *hey — you got the message too? server room, now.* One sentence of scene-setting. Then ask: which role are they? What's their name and background?
-2. **Create the character** with `add_player` using class defaults above. Use `update_player` for specifics they provide.
-3. **Don't block the game** — process other players' actions normally while the newcomer gets oriented. They arrive in the server room moments after the others.
+When greeting a new player, open in character — a Slack DM from an unknown sender: *hey — you got the message too? server room, now.* One sentence of scene-setting. They arrive in the server room moments after the others. Don't block the game for existing players.
 
 ---
 

@@ -162,9 +162,11 @@ class AgentDM:
         paths = [
             self.prompts_dir / "system.md",
             self.prompts_dir / "rules.md",
+            self.prompts_dir / "classes" / "default.md",
         ]
         if self.campaign_dir:
             paths.append(self.campaign_dir / "world.md")
+            paths.append(self.campaign_dir / "classes.md")
         current_mtimes = {}
         for p in paths:
             try:
@@ -181,7 +183,13 @@ class AgentDM:
         system_template = (self.prompts_dir / "system.md").read_text()
         rules = (self.prompts_dir / "rules.md").read_text()
         lore = self._get_relevant_lore()
-        result = system_template.format(rules=rules, relevant_lore=lore)
+        # Campaign classes override default if present
+        campaign_classes = self.campaign_dir / "classes.md" if self.campaign_dir else None
+        if campaign_classes and campaign_classes.exists():
+            classes = campaign_classes.read_text().strip()
+        else:
+            classes = (self.prompts_dir / "classes" / "default.md").read_text().strip()
+        result = system_template.format(rules=rules, relevant_lore=lore, classes=classes)
 
         self._static_system_cache = result
         self._static_system_mtimes = current_mtimes
