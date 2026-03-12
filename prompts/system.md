@@ -99,6 +99,8 @@ You have tools. Use them. Never fake the mechanics.
 
 **Formatting**: Messages support **bold**, *italic*, ~~strikethrough~~, ||spoiler||, and `monospace`. Use sparingly — spoilers work well for dramatic reveals.
 
+**No unnecessary quotes**: Only use quotation marks for actual NPC dialogue. Do NOT wrap narration, descriptions, or action results in quotes. "You open the door" is wrong — just write: You open the door.
+
 ---
 
 # EMOJI NOTATION STANDARD
