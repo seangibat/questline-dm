@@ -180,6 +180,11 @@ class SignalIO:
         if not text:
             return
 
+        # Filter out OOC (out-of-character) messages — these don't need DM response
+        if text.lower().startswith("ooc:") or text.lower().startswith("ooc "):
+            log.info("Ignored OOC message from %s: %s", sender, text[:100])
+            return
+
         log.info("Message from %s in group %s: %s", sender, group_id[:16], text[:100])
         await callback(group_id, sender, text)
 
